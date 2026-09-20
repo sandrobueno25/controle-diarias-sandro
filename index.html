@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Controle de Diárias 2.0 Offline</title>
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--primary:#111827;--ok:#15803d;--warn:#b45309;--danger:#b91c1c;--blue:#2563eb}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:var(--primary);color:white;padding:16px 16px 14px;position:sticky;top:0;z-index:10}
+header h1{font-size:20px;margin:0 0 4px}header p{margin:0;font-size:12px;opacity:.8}
+nav{display:flex;overflow:auto;gap:7px;padding:10px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:67px;z-index:9}
+nav button{border:0;background:#f3f4f6;padding:9px 11px;border-radius:20px;white-space:nowrap;font-size:12px}
+nav button.active{background:#111827;color:#fff}
+main{padding:14px;max-width:900px;margin:auto}.section{display:none}.section.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.kpi{font-size:23px;font-weight:700;margin-top:5px}.label{font-size:12px;color:var(--muted)}
+h2{font-size:18px;margin:4px 0 14px}h3{font-size:15px;margin:0 0 10px}
+label{display:block;font-size:12px;font-weight:700;margin:10px 0 5px}input,select,textarea{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:9px;background:#fff;font-size:14px}
+button.primary,button.secondary,button.danger{border:0;border-radius:9px;padding:11px 13px;font-weight:700;margin-top:10px}
+.primary{background:#111827;color:#fff}.secondary{background:#e5e7eb;color:#111827}.danger{background:#fee2e2;color:#991b1b}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.badge{display:inline-block;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:700}.green{background:#dcfce7;color:#166534}.yellow{background:#fef3c7;color:#92400e}.red{background:#fee2e2;color:#991b1b}.blue{background:#dbeafe;color:#1d4ed8}
+.small{font-size:11px;color:var(--muted)}.empty{text-align:center;padding:20px;color:var(--muted)}
+footer{text-align:center;padding:25px;color:var(--muted);font-size:11px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header>
+<h1>Controle de Diárias 2.0</h1>
+<p id="subtitle">Offline • dados salvos neste aparelho</p>
+</header>
+<nav id="nav"></nav>
+<main>
+
+<section id="dashboard" class="section active">
+<h2>Dashboard</h2>
+<div class="grid">
+<div class="card"><div class="label">Diárias completas</div><div class="kpi" id="kDiarias">0</div></div>
+<div class="card"><div class="label">Meias diárias</div><div class="kpi" id="kMeias">0</div></div>
+<div class="card"><div class="label">A receber</div><div class="kpi" id="kReceber">R$ 0,00</div></div>
+<div class="card"><div class="label">Recebido</div><div class="kpi" id="kRecebido">R$ 0,00</div></div>
+</div>
+<div class="card"><h3>Resumo do mês</h3><div id="resumoMes"></div></div>
+</section>
+
+<section id="registrar" class="section">
+<h2>Registrar diária</h2>
+<div class="card">
+<label>Data</label><input type="date" id="data">
+<label>Status</label><select id="status"><option>Trabalhei</option><option>Meia diária</option><option>Folga</option><option>Falta</option></select>
+<label>Valor da diária</label><input type="number" id="valor" min="0" step=".01" value="80">
+<label>Pagamento</label><select id="pagamento"><option>Pendente</option><option>Pago</option><option>Parcial</option></select>
+<label>Valor pago</label><input type="number" id="valorPago" min="0" step=".01" value="0">
+<label>Observação</label><textarea id="obs" rows="3" placeholder="Opcional"></textarea>
+<button class="primary" onclick="salvarDiaria()">Salvar diária</button>
+<button class="secondary" onclick="limparForm()">Limpar</button>
+</div>
+</section>
+
+<section id="historico" class="section">
+<h2>Histórico</h2>
+<div class="card">
+<div class="row"><input type="month" id="filtroMes" onchange="renderAll()"><select id="filtroStatus" onchange="renderAll()"><option value="">Todos</option><option>Trabalhei</option><option>Meia diária</option><option>Folga</option><option>Falta</option></select></div>
+</div>
+<div class="card" id="historicoBox"></div>
+</section>
+
+<section id="calendario" class="section">
+<h2>Calendário</h2>
+<div class="card"><input type="month" id="calMes" onchange="renderCalendario()"><div id="calBox" style="margin-top:12px"></div></div>
+</section>
+
+<section id="pagamentos" class="section">
+<h2>Pagamentos</h2>
+<div class="card" id="pagamentosBox"></div>
+</section>
+
+<section id="relatorios" class="section">
+<h2>Relatórios</h2>
+<div class="card" id="relatorioBox"></div>
+<button class="primary" onclick="window.print()">Imprimir / salvar PDF</button>
+</section>
+
+<section id="meta" class="section">
+<h2>Meta</h2>
+<div class="card">
+<label>Meta mensal (R$)</label><input type="number" id="metaValor" value="3000" min="0" step=".01" onchange="salvarConfig()">
+<div id="metaBox" style="margin-top:12px"></div>
+</div>
+</section>
+
+<section id="simulador" class="section">
+<h2>Simulador</h2>
+<div class="card">
+<label>Valor da diária</label><input type="number" id="simValor" value="80">
+<label>Quantidade de dias completos</label><input type="number" id="simDias" value="22">
+<label>Quantidade de meias diárias</label><input type="number" id="simMeias" value="0">
+<div id="simResultado" style="margin-top:14px"></div>
+<button class="primary" onclick="simular()">Calcular</button>
+</div>
+</section>
+
+<section id="backup" class="section">
+<h2>Backup</h2>
+<div class="card">
+<p class="small">O backup salva seus registros e configurações em um arquivo JSON. Guarde esse arquivo para poder restaurar os dados em outro aparelho.</p>
+<button class="primary" onclick="exportar()">Exportar backup</button>
+<label>Restaurar backup</label><input type="file" id="arquivoBackup" accept=".json,application/json" onchange="importar(event)">
+<button class="danger" onclick="apagarTudo()">Apagar todos os dados</button>
+</div>
+</section>
+
+<section id="config" class="section">
+<h2>Configurações</h2>
+<div class="card">
+<label>Nome do sistema / usuário</label><input id="nomeUsuario" placeholder="Ex.: Sandro" onchange="salvarConfig()">
+<label>Valor padrão da diária (R$)</label><input type="number" id="valorPadrao" value="80" min="0" step=".01" onchange="salvarConfig();atualizarValorPadrao()">
+<p class="small">Os dados são armazenados localmente no navegador deste aparelho. Não dependem de internet.</p>
+</div>
+</section>
+</main>
+<footer>Controle de Diárias 2.0 • funcionamento offline • armazenamento local</footer>
+
+<script>
+const KEY='controle_diarias_2_offline_v1';
+let state=JSON.parse(localStorage.getItem(KEY)||'null')||{registros:[],config:{nome:'',valorPadrao:80,meta:3000}};
+const menus=[['dashboard','Dashboard'],['registrar','Registrar'],['historico','Histórico'],['calendario','Calendário'],['pagamentos','Pagamentos'],['relatorios','Relatórios'],['meta','Meta'],['simulador','Simulador'],['backup','Backup'],['config','Configurações']];
+const nav=document.getElementById('nav');
+nav.innerHTML=menus.map((m,i)=>`<button class="${i===0?'active':''}" onclick="show('${m[0]}',this)">${m[1]}</button>`).join('');
+function show(id,btn){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');renderAll();}
+function money(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));}
+function hoje(){return new Date().toISOString().slice(0,10);}
+function fmtDate(s){return s?new Date(s+'T12:00:00').toLocaleDateString('pt-BR'):''}
+function valorDe(r){return r.status==='Trabalhei'?Number(r.valor):r.status==='Meia diária'?Number(r.valor)/2:0}
+function salvarDiaria(){
+ const r={id:Date.now(),data:data.value||hoje(),status:status.value,valor:Number(valor.value||state.config.valorPadrao),pagamento:pagamento.value,valorPago:Number(valorPago.value||0),obs:obs.value.trim()};
+ if(r.pagamento==='Pago')r.valorPago=valorDe(r);
+ if(r.pagamento==='Pendente')r.valorPago=0;
+ state.registros.push(r);save();limparForm();renderAll();alert('Diária salva no aparelho.');
+}
+function limparForm(){data.value=hoje();status.value='Trabalhei';valor.value=state.config.valorPadrao;pagamento.value='Pendente';valorPago.value=0;obs.value='';}
+function excluir(id){if(confirm('Excluir este registro?')){state.registros=state.registros.filter(r=>r.id!==id);save();renderAll();}}
+function editarPagamento(id){
+ const r=state.registros.find(x=>x.id===id); if(!r)return;
+ const v=prompt('Informe o valor já pago:',r.valorPago); if(v===null)return;
+ r.valorPago=Math.max(0,Number(v)||0);
+ const total=valorDe(r); r.pagamento=r.valorPago<=0?'Pendente':r.valorPago>=total?'Pago':'Parcial'; save();renderAll();
+}
+function registrosFiltrados(){let a=[...state.registros];const m=filtroMes.value;if(m)a=a.filter(r=>r.data.startsWith(m));const s=filtroStatus.value;if(s)a=a.filter(r=>r.status===s);return a.sort((a,b)=>b.data.localeCompare(a.data));}
+function renderHistorico(){
+ const a=registrosFiltrados(); if(!a.length){historicoBox.innerHTML='<div class="empty">Nenhum registro encontrado.</div>';return}
+ historicoBox.innerHTML='<table><thead><tr><th>Data</th><th>Status</th><th>Valor</th><th>Pago</th><th>Ações</th></tr></thead><tbody>'+
+ a.map(r=>`<tr><td>${fmtDate(r.data)}</td><td><span class="badge ${r.status==='Trabalhei'?'green':r.status==='Meia diária'?'blue':'yellow'}">${r.status}</span>${r.obs?'<br><span class="small">'+escapeHtml(r.obs)+'</span>':''}</td><td>${money(valorDe(r))}</td><td>${money(r.valorPago)}<br><span class="badge ${r.pagamento==='Pago'?'green':r.pagamento==='Parcial'?'yellow':'red'}">${r.pagamento}</span></td><td><button class="secondary" onclick="editarPagamento(${r.id})">Pagamento</button><button class="danger" onclick="excluir(${r.id})">Excluir</button></td></tr>`).join('')+'</tbody></table>';
+}
+function renderDashboard(){
+ const mes=new Date().toISOString().slice(0,7),a=state.registros.filter(r=>r.data.startsWith(mes));
+ const full=a.filter(r=>r.status==='Trabalhei').length,meia=a.filter(r=>r.status==='Meia diária').length,total=a.reduce((s,r)=>s+valorDe(r),0),pago=a.reduce((s,r)=>s+Number(r.valorPago||0),0);
+ kDiarias.textContent=full;kMeias.textContent=meia;kReceber.textContent=money(total-pago);kRecebido.textContent=money(pago);
+ resumoMes.innerHTML=`<p><b>${a.length}</b> registros no mês atual.</p><p>Total produzido: <b>${money(total)}</b></p><p>Pago: <b>${money(pago)}</b></p><p>Pendente: <b>${money(total-pago)}</b></p>`;
+}
+function renderCalendario(){
+ const m=calMes.value||new Date().toISOString().slice(0,7),a=state.registros.filter(r=>r.data.startsWith(m)).sort((x,y)=>x.data.localeCompare(y.data));
+ calBox.innerHTML=a.length?a.map(r=>`<div class="card"><b>${fmtDate(r.data)}</b> — ${r.status}<br>${money(valorDe(r))} • ${r.pagamento}</div>`).join(''):'<div class="empty">Nenhum registro neste mês.</div>';
+}
+function renderPagamentos(){
+ const a=[...state.registros].sort((x,y)=>y.data.localeCompare(x.data));let total=0,pago=0;a.forEach(r=>{total+=valorDe(r);pago+=Number(r.valorPago||0)});
+ pagamentosBox.innerHTML=`<p>Total: <b>${money(total)}</b></p><p>Recebido: <b>${money(pago)}</b></p><p>A receber: <b>${money(total-pago)}</b></p>`+(a.length?'<hr>'+a.map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${fmtDate(r.data)}</b> — ${money(valorDe(r))}<br>Pago: ${money(r.valorPago)} • ${r.pagamento} <button class="secondary" onclick="editarPagamento(${r.id})">Alterar</button></div>`).join(''):'');
+}
+function renderRelatorio(){
+ const por={};state.registros.forEach(r=>{const m=r.data.slice(0,7);por[m]=(por[m]||0)+valorDe(r)});
+ const rows=Object.entries(por).sort((a,b)=>b[0].localeCompare(a[0]));
+ relatorioBox.innerHTML=rows.length?'<table><tr><th>Mês</th><th>Total</th></tr>'+rows.map(([m,v])=>`<tr><td>${m}</td><td>${money(v)}</td></tr>`).join('')+'</table>':'<div class="empty">Ainda não há dados.</div>';
+}
+function renderMeta(){
+ const m=new Date().toISOString().slice(0,7),feito=state.registros.filter(r=>r.data.startsWith(m)).reduce((s,r)=>s+valorDe(r),0),meta=Number(state.config.meta||0),pct=meta?Math.min(100,feito/meta*100):0;
+ metaBox.innerHTML=`<p>Meta: <b>${money(meta)}</b></p><p>Realizado: <b>${money(feito)}</b></p><p>Falta: <b>${money(Math.max(0,meta-feito))}</b></p><div style="height:18px;background:#e5e7eb;border-radius:20px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#111827"></div></div><p>${pct.toFixed(1)}% da meta</p>`;
+}
+function simular(){const v=Number(simValor.value||0),d=Number(simDias.value||0),h=Number(simMeias.value||0),t=v*d+v/2*h;simResultado.innerHTML=`<div class="card"><h3>Resultado</h3><p>${d} diárias + ${h} meias</p><div class="kpi">${money(t)}</div></div>`}
+function exportar(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-controle-diarias-'+hoje()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function importar(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const x=JSON.parse(rd.result);if(!x.registros||!x.config)throw 0;state=x;save();renderAll();alert('Backup restaurado.')}catch{alert('Arquivo de backup inválido.')}};rd.readAsText(f)}
+function apagarTudo(){if(confirm('ATENÇÃO: isso apagará todos os registros deste aparelho. Continuar?')){state={registros:[],config:{nome:'',valorPadrao:80,meta:3000}};save();renderAll();limparForm()}}
+function salvarConfig(){state.config.nome=nomeUsuario.value;state.config.valorPadrao=Number(valorPadrao.value||80);state.config.meta=Number(metaValor.value||3000);save();document.getElementById('subtitle').textContent=(state.config.nome?state.config.nome+' • ':'')+'Offline • dados salvos neste aparelho'}
+function atualizarValorPadrao(){valor.value=state.config.valorPadrao}
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function renderAll(){renderDashboard();renderHistorico();renderCalendario();renderPagamentos();renderRelatorio();renderMeta();simular()}
+function init(){data.value=hoje();filtroMes.value=new Date().toISOString().slice(0,7);calMes.value=filtroMes.value;nomeUsuario.value=state.config.nome||'';valorPadrao.value=state.config.valorPadrao||80;metaValor.value=state.config.meta||3000;valor.value=state.config.valorPadrao||80;document.getElementById('subtitle').textContent=(state.config.nome?state.config.nome+' • ':'')+'Offline • dados salvos neste aparelho';renderAll()}
+init();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
